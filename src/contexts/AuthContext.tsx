@@ -108,8 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (data: { email: string; password: string; full_name: string; department: string; office_location: string }) => {
+  const signUp = async (data: {
+    email: string;
+    password: string;
+    full_name: string;
+    department: string;
+    office_location: string;
+  }) => {
     try {
+      // Step 1: Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -117,18 +124,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (authError) throw authError;
 
-      if (authData.user) {
-        const { error: insertError } = await supabase
-          .from('employees')
-          .insert({
-            id: authData.user.id,
-            full_name: data.full_name,
-            email: data.email,
-            department: data.department,
-            office_location: data.office_location,
-          });
+      if (!authData.user?.id) {
+        throw new Error('User creation failed — no ID returned.');
+      }
 
-        if (insertError) throw insertError;
+      const userId = authData.user.id;
+
+      // Step 2: Wait for session to be established
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Step 3: Insert employee record
+      const { error: insertError } = await supabase
+        .from('employees')
+        .insert({
+          id: userId,
+          full_name: data.full_name,
+          email: data.email,
+          department: data.department,
+          office_location: data.office_location,
+        });
+
+      if (insertError) {
+        // If employee already exists (duplicate), ignore
+        if (insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+          return { error: null };
+        }
+        throw insertError;
       }
 
       return { error: null };
