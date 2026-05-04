@@ -44,7 +44,7 @@ export function AdminPanel() {
     fetchTechnicians();
   }, []);
 
-  // ✅ SEULE PARTIE MODIFIÉE
+  // ✅ CORRECTION ICI
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -56,17 +56,29 @@ export function AdminPanel() {
     setLoading(true);
 
     try {
-      const { error } = await supabase
+      // ✅ 1. créer user dans Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (error || !data.user) {
+        throw new Error(error?.message || 'Erreur création user');
+      }
+
+      // ✅ 2. ajouter dans technicians AVEC id
+      const { error: insertError } = await supabase
         .from('technicians')
         .insert({
+          id: data.user.id,
           full_name: formData.full_name,
           email: formData.email,
           specialty: formData.specialty,
           availability: 'available'
         });
 
-      if (error) {
-        throw new Error(error.message);
+      if (insertError) {
+        throw new Error(insertError.message);
       }
 
       toast.success('Technician created successfully');
@@ -79,6 +91,7 @@ export function AdminPanel() {
       });
 
       fetchTechnicians();
+
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create technician');
     } finally {
@@ -123,6 +136,7 @@ export function AdminPanel() {
                       className="px-3"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
                     <Input
@@ -135,6 +149,7 @@ export function AdminPanel() {
                       className="px-3"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
                     <Input
@@ -147,6 +162,7 @@ export function AdminPanel() {
                       className="px-3"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="specialty">Specialty</Label>
                     <Select
@@ -166,6 +182,7 @@ export function AdminPanel() {
                     </Select>
                   </div>
                 </div>
+
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Creating...' : 'Create Technician'}
                 </Button>
@@ -184,37 +201,32 @@ export function AdminPanel() {
             </CardHeader>
             <CardContent>
               <div className="w-full max-w-full overflow-x-auto">
-                <Table className="[&>div]:max-w-full">
+                <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="whitespace-nowrap">Full Name</TableHead>
-                      <TableHead className="whitespace-nowrap">Email</TableHead>
-                      <TableHead className="whitespace-nowrap">Specialty</TableHead>
-                      <TableHead className="whitespace-nowrap">Availability</TableHead>
+                      <TableHead>Full Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Specialty</TableHead>
+                      <TableHead>Availability</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {technicians.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground whitespace-nowrap">
+                        <TableCell colSpan={4} className="text-center text-muted-foreground">
                           No technicians yet
                         </TableCell>
                       </TableRow>
                     ) : (
                       technicians.map((tech) => (
                         <TableRow key={tech.id}>
-                          <TableCell className="whitespace-nowrap">{tech.full_name}</TableCell>
-                          <TableCell className="whitespace-nowrap">{tech.email}</TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <Badge variant="outline" className="capitalize">
-                              {tech.specialty}
-                            </Badge>
+                          <TableCell>{tech.full_name}</TableCell>
+                          <TableCell>{tech.email}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{tech.specialty}</Badge>
                           </TableCell>
-                          <TableCell className="whitespace-nowrap">
-                            <Badge
-                              variant={tech.availability === 'available' ? 'default' : 'secondary'}
-                              className="capitalize"
-                            >
+                          <TableCell>
+                            <Badge>
                               {tech.availability}
                             </Badge>
                           </TableCell>
