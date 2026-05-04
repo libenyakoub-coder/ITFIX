@@ -44,6 +44,7 @@ export function AdminPanel() {
     fetchTechnicians();
   }, []);
 
+  // ✅ SEULE PARTIE MODIFIÉE
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -55,31 +56,28 @@ export function AdminPanel() {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('create-technician', {
-        body: {
+      const { error } = await supabase
+        .from('technicians')
+        .insert({
           full_name: formData.full_name,
           email: formData.email,
-          password: formData.password,
           specialty: formData.specialty,
-        },
-      });
+          availability: 'available'
+        });
 
       if (error) {
-        const errorMsg = await error?.context?.text();
-        throw new Error(errorMsg || error.message);
-      }
-
-      if (data?.error) {
-        throw new Error(data.error);
+        throw new Error(error.message);
       }
 
       toast.success('Technician created successfully');
+
       setFormData({
         full_name: '',
         email: '',
         password: '',
         specialty: '',
       });
+
       fetchTechnicians();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to create technician');
@@ -94,7 +92,6 @@ export function AdminPanel() {
         <div>
           <h2 className="text-2xl font-semibold text-balance">Admin Panel</h2>
 
-          {/* ✅ correction ici */}
           <p className="text-sm text-muted-foreground">
             Connecté : {user?.email}
           </p>
@@ -104,7 +101,6 @@ export function AdminPanel() {
           </p>
         </div>
 
-        {/* Create Technician Section */}
         <section id="create">
           <Card>
             <CardHeader>
@@ -178,7 +174,6 @@ export function AdminPanel() {
           </Card>
         </section>
 
-        {/* Technician List Section */}
         <section id="list">
           <Card>
             <CardHeader>
