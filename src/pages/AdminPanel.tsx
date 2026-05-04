@@ -44,7 +44,6 @@ export function AdminPanel() {
     fetchTechnicians();
   }, []);
 
-  // ✅ CORRECTION ICI
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -56,7 +55,7 @@ export function AdminPanel() {
     setLoading(true);
 
     try {
-      // ✅ 1. créer user dans Supabase Auth
+      // ✅ 1. créer utilisateur
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -66,7 +65,12 @@ export function AdminPanel() {
         throw new Error(error?.message || 'Erreur création user');
       }
 
-      // ✅ 2. ajouter dans technicians AVEC id
+      // ⚠️ important: vérifier email déjà utilisé
+      if (!data.user.id) {
+        throw new Error('User creation failed');
+      }
+
+      // ✅ 2. insert avec id
       const { error: insertError } = await supabase
         .from('technicians')
         .insert({
@@ -74,7 +78,7 @@ export function AdminPanel() {
           full_name: formData.full_name,
           email: formData.email,
           specialty: formData.specialty,
-          availability: 'available'
+          availability: 'available',
         });
 
       if (insertError) {
@@ -83,6 +87,7 @@ export function AdminPanel() {
 
       toast.success('Technician created successfully');
 
+      // reset form
       setFormData({
         full_name: '',
         email: '',
@@ -103,139 +108,119 @@ export function AdminPanel() {
     <DashboardLayout sidebarItems={sidebarItems}>
       <div className="p-4 md:p-8 space-y-8">
         <div>
-          <h2 className="text-2xl font-semibold text-balance">Admin Panel</h2>
-
+          <h2 className="text-2xl font-semibold">Admin Panel</h2>
           <p className="text-sm text-muted-foreground">
             Connecté : {user?.email}
           </p>
-
-          <p className="text-muted-foreground mt-1 text-pretty">
+          <p className="text-muted-foreground mt-1">
             Manage IT technicians and system settings
           </p>
         </div>
 
+        {/* CREATE */}
         <section id="create">
           <Card>
             <CardHeader>
-              <CardTitle className="text-balance">Create Technician</CardTitle>
-              <CardDescription className="text-pretty">
+              <CardTitle>Create Technician</CardTitle>
+              <CardDescription>
                 Add a new IT technician to the system
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="full_name">Full Name</Label>
-                    <Input
-                      id="full_name"
-                      placeholder="John Smith"
-                      value={formData.full_name}
-                      onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                      required
-                      className="px-3"
-                    />
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john.smith@company.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                      className="px-3"
-                    />
-                  </div>
+                <Input
+                  placeholder="Full Name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  required
+                />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Create a secure password"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      className="px-3"
-                    />
-                  </div>
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="specialty">Specialty</Label>
-                    <Select
-                      value={formData.specialty}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, specialty: value as TechnicianSpecialty })
-                      }
-                    >
-                      <SelectTrigger id="specialty">
-                        <SelectValue placeholder="Select specialty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="hardware">Hardware</SelectItem>
-                        <SelectItem value="software">Software</SelectItem>
-                        <SelectItem value="network">Network</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  required
+                />
+
+                <Select
+                  value={formData.specialty}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, specialty: value as TechnicianSpecialty })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select specialty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hardware">Hardware</SelectItem>
+                    <SelectItem value="software">Software</SelectItem>
+                    <SelectItem value="network">Network</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? 'Creating...' : 'Create Technician'}
                 </Button>
+
               </form>
             </CardContent>
           </Card>
         </section>
 
+        {/* LIST */}
         <section id="list">
           <Card>
             <CardHeader>
-              <CardTitle className="text-balance">Technician List</CardTitle>
-              <CardDescription className="text-pretty">
+              <CardTitle>Technician List</CardTitle>
+              <CardDescription>
                 All registered IT technicians
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="w-full max-w-full overflow-x-auto">
-                <Table>
-                  <TableHeader>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Full Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Specialty</TableHead>
+                    <TableHead>Availability</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {technicians.length === 0 ? (
                     <TableRow>
-                      <TableHead>Full Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Specialty</TableHead>
-                      <TableHead>Availability</TableHead>
+                      <TableCell colSpan={4} className="text-center">
+                        No technicians yet
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {technicians.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
-                          No technicians yet
+                  ) : (
+                    technicians.map((tech) => (
+                      <TableRow key={tech.id}>
+                        <TableCell>{tech.full_name}</TableCell>
+                        <TableCell>{tech.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{tech.specialty}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge>{tech.availability}</Badge>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      technicians.map((tech) => (
-                        <TableRow key={tech.id}>
-                          <TableCell>{tech.full_name}</TableCell>
-                          <TableCell>{tech.email}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{tech.specialty}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge>
-                              {tech.availability}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                    ))
+                  )}
+                </TableBody>
+
+              </Table>
             </CardContent>
           </Card>
         </section>
