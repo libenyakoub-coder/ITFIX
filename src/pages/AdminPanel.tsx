@@ -4,7 +4,6 @@ import { supabase } from '@/db/supabase';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -55,26 +54,45 @@ export function AdminPanel() {
     setLoading(true);
 
     try {
-      // ✅ 1. créer utilisateur
-      const { data, error } = await supabase.auth.signUp({
+      // Step 1: Create the auth user
+      // ⚠️  IMPORTANT: In Supabase Dashboard → Authentication → Settings,
+      //     disable "Enable email confirmations" so the user ID is immediately
+      //     available and the foreign key insert below won't fail.
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          // Skip email redirect — admin-created accounts don't need it
+          emailRedirectTo: undefined,
+        },
       });
 
-      if (error || !data.user) {
-        throw new Error(error?.message || 'Erreur création user');
+      if (authError) {
+        // Handle common errors with clear messages
+        if (authError.message.includes('already registered')) {
+          throw new Error('This email is already registered. Use a different email.');
+        }
+        throw new Error(authError.message);
       }
 
-      // ⚠️ important: vérifier email déjà utilisé
-      if (!data.user.id) {
-        throw new Error('User creation failed');
+      if (!authData.user?.id) {
+        throw new Error(
+          'User creation failed — no ID returned. ' +
+          'Make sure "Enable email confirmations" is disabled in Supabase Auth settings.'
+        );
       }
 
-      // ✅ 2. insert avec id
+      const userId = authData.user.id;
+
+      // Step 2: Wait a short moment to ensure auth.users row is committed
+      // This is needed because Supabase can have a brief propagation delay
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Step 3: Insert into technicians table using the auth user ID
       const { error: insertError } = await supabase
         .from('technicians')
         .insert({
-          id: data.user.id,
+          id: userId,
           full_name: formData.full_name,
           email: formData.email,
           specialty: formData.specialty,
@@ -82,12 +100,23 @@ export function AdminPanel() {
         });
 
       if (insertError) {
-        throw new Error(insertError.message);
+        // If insert failed, the auth user was created but technician record wasn't.
+        // Provide a detailed error so the admin can handle it manually if needed.
+        if (insertError.message.includes('foreign key')) {
+          throw new Error(
+            'Foreign key error: The auth user was created but could not be linked. ' +
+            'Please disable "Enable email confirmations" in Supabase Auth settings and try again.'
+          );
+        }
+        if (insertError.message.includes('duplicate') || insertError.message.includes('unique')) {
+          throw new Error('A technician with this email already exists.');
+        }
+        throw new Error(`Database error: ${insertError.message}`);
       }
 
-      toast.success('Technician created successfully');
+      toast.success('Technician created successfully!');
 
-      // reset form
+      // Reset form
       setFormData({
         full_name: '',
         email: '',
@@ -146,9 +175,10 @@ export function AdminPanel() {
 
                 <Input
                   type="password"
-                  placeholder="Password"
+                  placeholder="Password (min 6 characters)"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  minLength={6}
                   required
                 />
 
@@ -200,20 +230,25 @@ export function AdminPanel() {
                 <TableBody>
                   {technicians.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                         No technicians yet
                       </TableCell>
                     </TableRow>
                   ) : (
                     technicians.map((tech) => (
                       <TableRow key={tech.id}>
-                        <TableCell>{tech.full_name}</TableCell>
+                        <TableCell className="font-medium">{tech.full_name}</TableCell>
                         <TableCell>{tech.email}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{tech.specialty}</Badge>
+                          <Badge variant="outline" className="capitalize">{tech.specialty}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge>{tech.availability}</Badge>
+                          <Badge
+                            variant={tech.availability === 'available' ? 'default' : 'secondary'}
+                            className="capitalize"
+                          >
+                            {tech.availability}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     ))
