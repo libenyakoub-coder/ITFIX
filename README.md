@@ -1,91 +1,52 @@
-# Welcome to Your Miaoda Project
+# IT-Fix — Support Informatique
 
-## Project Info
 
-## Project Directory
+## Mapping du Thème
 
-```
-├── README.md # Documentation
-├── components.json # Component library configuration
-├── index.html # Entry file
-├── package.json # Package management
-├── postcss.config.js # PostCSS configuration
-├── public # Static resources directory
-│   ├── favicon.png # Icon
-│   └── images # Image resources
-├── src # Source code directory
-│   ├── App.tsx # Entry file
-│   ├── components # Components directory
-│   ├── context # Context directory
-│   ├── db # Database configuration directory
-│   ├── hooks # Common hooks directory
-│   ├── index.css # Global styles
-│   ├── layout # Layout directory
-│   ├── lib # Utility library directory
-│   ├── main.tsx # Entry file
-│   ├── routes.tsx # Routing configuration
-│   ├── pages # Pages directory
-│   ├── services # Database interaction directory
-│   ├── types # Type definitions directory
-├── tsconfig.app.json # TypeScript frontend configuration file
-├── tsconfig.json # TypeScript configuration file
-├── tsconfig.node.json # TypeScript Node.js configuration file
-└── vite.config.ts # Vite configuration file
-```
+**Thème choisi : Support Informatique (Thème n°3)**
+
+IT-Fix est un extranet métier permettant aux employés de soumettre des tickets de panne informatique, et aux techniciens de les traiter.
+
+| Élément | Dans le sujet | Dans IT-Fix | Description |
+|---------|--------------|-------------|-------------|
+| Table A | Utilisateurs | Employés | Se connectent pour soumettre des tickets |
+| Table B | Ressources | Techniciens | Spécialistes IT (Hardware, Software, Network) |
+| Table C | Interactions | Tickets | Relie un employé à un technicien avec statut et date |
+| Fichier | Document uploadé | Screenshot du bug | Image uploadée via Supabase Storage |
+
+---
+
+## Analyse d'Architecture Cloud
+
+### Pourquoi Vercel + Supabase est plus logique financièrement ? (CAPEX vs OPEX)
+
+Déployer une application sur un serveur physique traditionnel représente un investissement lourd en **CAPEX** (Capital Expenditure) : achat de machines, licences, infrastructure réseau et maintenance matérielle, engagés avant même la mise en production.
+
+Avec Vercel et Supabase, on bascule vers un modèle **OPEX** (Operational Expenditure) : on paie uniquement ce qu'on consomme, sans investissement initial. Vercel offre un hébergement gratuit avec CI/CD automatique, et Supabase fournit une base PostgreSQL managée avec authentification et stockage sans serveur à gérer. Le risque financier est minimal et les coûts ne s'appliquent qu'en cas de croissance réelle.
+
+### Comment Vercel gère-t-il la scalabilité ?
+
+Un data center physique implique des contraintes fixes : racks de serveurs, climatisation, alimentation redondante. En cas de pic de trafic, il faut commander et installer du matériel — un processus qui prend des semaines.
+
+Vercel repose sur une architecture **Serverless** et un **Edge Network** mondial. Chaque requête est traitée par une fonction isolée déployée au plus proche de l'utilisateur. La scalabilité est automatique : en pic de trafic, les instances se multiplient sans intervention humaine ; en période creuse, les ressources sont libérées. Pour IT-Fix, l'application reste performante qu'il y ait 10 ou 10 000 employés connectés, sans aucune gestion infrastructure.
+
+### Données structurées vs non-structurées dans IT-Fix
+
+**Données structurées** : les tables PostgreSQL dans Supabase — `employees`, `technicians` et `tickets` — avec schéma fixe, types, contraintes et relations. Elles sont interrogeables via SQL et sécurisées par les politiques RLS.
+
+**Données non-structurées** : les captures d'écran (PNG/JPG) uploadées par les employés lors de la soumission d'un ticket. Ces fichiers sont stockés dans Supabase Storage (bucket `bug-screenshots`). Seule leur URL est sauvegardée dans la colonne `screenshot_url` de la table `tickets`, faisant le lien entre les deux types de données.
+
+---
 
 ## Tech Stack
 
-Vite, TypeScript, React, Supabase
+- **Frontend** : React + TypeScript + Vite + TailwindCSS + shadcn/ui
+- **Backend / BaaS** : Supabase (PostgreSQL + Auth + Storage + RLS)
+- **Hébergement / CI/CD** : Vercel
 
-## Development Guidelines
+## Lancer le projet localement
 
-### How to edit code locally?
-
-You can choose [VSCode](https://code.visualstudio.com/Download) or any IDE you prefer. The only requirement is to have Node.js and npm installed.
-
-### Environment Requirements
-
+```bash
+npm install
+npm run dev
 ```
-# Node.js ≥ 20
-# npm ≥ 10
-Example:
-# node -v   # v20.18.3
-# npm -v    # 10.8.2
-```
-
-### Installing Node.js on Windows
-
-```
-# Step 1: Visit the Node.js official website: https://nodejs.org/, click download. The website will automatically suggest a suitable version (32-bit or 64-bit) for your system.
-# Step 2: Run the installer: Double-click the downloaded installer to run it.
-# Step 3: Complete the installation: Follow the installation wizard to complete the process.
-# Step 4: Verify installation: Open Command Prompt (cmd) or your IDE terminal, and type `node -v` and `npm -v` to check if Node.js and npm are installed correctly.
-```
-
-### Installing Node.js on macOS
-
-```
-# Step 1: Using Homebrew (Recommended method): Open Terminal. Type the command `brew install node` and press Enter. If Homebrew is not installed, you need to install it first by running the following command in Terminal:
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-Alternatively, use the official installer: Visit the Node.js official website. Download the macOS .pkg installer. Open the downloaded .pkg file and follow the prompts to complete the installation.
-# Step 2: Verify installation: Open Command Prompt (cmd) or your IDE terminal, and type `node -v` and `npm -v` to check if Node.js and npm are installed correctly.
-```
-
-### After installation, follow these steps:
-
-```
-# Step 1: Download the code package
-# Step 2: Extract the code package
-# Step 3: Open the code package with your IDE and navigate into the code directory
-# Step 4: In the IDE terminal, run the command to install dependencies: npm i
-# Step 5: In the IDE terminal, run the command to start the development server: npm run dev -- --host 127.0.0.1
-# Step 6: if step 5 failed, try this command to start the development server: npx vite --host 127.0.0.1
-```
-
-### How to develop backend services?
-
-Configure environment variables and install relevant dependencies.If you need to use a database, please use the official version of Supabase.
-
-## Learn More
-
-You can also check the help documentation: Download and Building the app（ [https://intl.cloud.baidu.com/en/doc/MIAODA/s/download-and-building-the-app-en](https://intl.cloud.baidu.com/en/doc/MIAODA/s/download-and-building-the-app-en)）to learn more detailed content.
