@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
@@ -12,13 +12,20 @@ import { Wrench, Laptop, Network, HelpCircle, ArrowRightLeft, User as UserIcon }
 import { toast } from 'sonner';
 import type { Ticket, TicketCategory } from '@/types/types';
 
+const VALID_TABS = ['hardware', 'software', 'network', 'other', 'transferred', 'assigned'];
+
+function getTabFromHash(): string {
+  const hash = window.location.hash.replace('#', '');
+  return VALID_TABS.includes(hash) ? hash : 'hardware';
+}
+
 export function TechnicianDashboard() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('hardware');
+  const [activeTab, setActiveTab] = useState(getTabFromHash);
 
   const sidebarItems = [
     { label: 'Hardware', path: '/tech-dashboard#hardware', icon: <Wrench className="h-4 w-4" /> },
@@ -28,6 +35,18 @@ export function TechnicianDashboard() {
     { label: 'Transferred', path: '/tech-dashboard#transferred', icon: <ArrowRightLeft className="h-4 w-4" /> },
     { label: 'My Assigned', path: '/tech-dashboard#assigned', icon: <UserIcon className="h-4 w-4" /> },
   ];
+
+  const handleTabChange = useCallback((tab: string) => {
+    setActiveTab(tab);
+    window.history.replaceState(null, '', `/tech-dashboard#${tab}`);
+  }, []);
+
+  const handleSidebarClick = useCallback((path: string) => {
+    const hash = path.split('#')[1];
+    if (hash && VALID_TABS.includes(hash)) {
+      handleTabChange(hash);
+    }
+  }, [handleTabChange]);
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -149,7 +168,7 @@ export function TechnicianDashboard() {
   };
 
   return (
-    <DashboardLayout sidebarItems={sidebarItems}>
+    <DashboardLayout sidebarItems={sidebarItems} onSidebarItemClick={handleSidebarClick}>
       <div className="p-4 md:p-8">
         <div className="mb-6">
           <h2 className="text-2xl font-semibold text-balance">Technician Dashboard</h2>
@@ -158,7 +177,7 @@ export function TechnicianDashboard() {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap flex">
             <TabsTrigger value="hardware">Hardware</TabsTrigger>
             <TabsTrigger value="software">Software</TabsTrigger>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
@@ -27,6 +27,17 @@ export function AdminPanel() {
     { label: 'Create Technician', path: '/admin#create', icon: <Shield className="h-4 w-4" /> },
     { label: 'Technician List', path: '/admin#list', icon: <Users className="h-4 w-4" /> },
   ];
+
+  const handleSidebarClick = useCallback((path: string) => {
+    const hash = path.split('#')[1];
+    if (hash) {
+      window.history.replaceState(null, '', `/admin#${hash}`);
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, []);
 
   const fetchTechnicians = async () => {
     const { data, error } = await supabase
@@ -134,7 +145,7 @@ export function AdminPanel() {
   };
 
   return (
-    <DashboardLayout sidebarItems={sidebarItems}>
+    <DashboardLayout sidebarItems={sidebarItems} onSidebarItemClick={handleSidebarClick}>
       <div className="p-4 md:p-8 space-y-8">
         <div>
           <h2 className="text-2xl font-semibold">Admin Panel</h2>

@@ -13,9 +13,10 @@ interface DashboardLayoutProps {
     path: string;
     icon: ReactNode;
   }>;
+  onSidebarItemClick?: (path: string) => void;
 }
 
-export function DashboardLayout({ children, sidebarItems }: DashboardLayoutProps) {
+export function DashboardLayout({ children, sidebarItems, onSidebarItemClick }: DashboardLayoutProps) {
   const { user, role, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ export function DashboardLayout({ children, sidebarItems }: DashboardLayoutProps
     await signOut();
     navigate('/login');
   };
+
+  const currentFullPath = location.pathname + location.hash;
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col">
@@ -36,12 +39,18 @@ export function DashboardLayout({ children, sidebarItems }: DashboardLayoutProps
       </div>
       <nav className="flex-1 space-y-1 p-4">
         {sidebarItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = currentFullPath === item.path;
           return (
             <Link
               key={item.path}
               to={item.path}
-              onClick={() => setMobileOpen(false)}
+              onClick={(e) => {
+                if (onSidebarItemClick) {
+                  e.preventDefault();
+                  onSidebarItemClick(item.path);
+                }
+                setMobileOpen(false);
+              }}
               className={`flex items-center gap-3 rounded px-3 py-2 text-sm transition-colors ${
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
@@ -105,3 +114,4 @@ export function DashboardLayout({ children, sidebarItems }: DashboardLayoutProps
     </div>
   );
 }
+
