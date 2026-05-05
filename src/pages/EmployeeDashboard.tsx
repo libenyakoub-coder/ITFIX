@@ -7,10 +7,11 @@ import { TicketCard } from '@/components/tickets/TicketCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Ticket, Plus, User as UserIcon } from 'lucide-react';
-import type { Ticket as TicketType } from '@/types/types';
+import type { Ticket as TicketType, Employee } from '@/types/types';
 
 export function EmployeeDashboard() {
-  const { user, employee } = useAuth();
+  const { user, employee: employeeFromContext } = useAuth();
+  const [employee, setEmployee] = useState<Employee | null>(employeeFromContext);
   const [tickets, setTickets] = useState<TicketType[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,25 @@ export function EmployeeDashboard() {
       }
     }
   }, []);
+
+  // ✅ Si employee est null dans le context, on le charge directement depuis Supabase
+  useEffect(() => {
+    if (!user) return;
+
+    if (employeeFromContext) {
+      setEmployee(employeeFromContext);
+      return;
+    }
+
+    supabase
+      .from('employees')
+      .select('*')
+      .eq('id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setEmployee(data);
+      });
+  }, [user, employeeFromContext]);
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -109,24 +129,28 @@ export function EmployeeDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Full Name</p>
-                  <p className="mt-1">{employee?.full_name}</p>
+              {employee ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Full Name</p>
+                    <p className="mt-1">{employee.full_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Email</p>
+                    <p className="mt-1">{employee.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Department</p>
+                    <p className="mt-1">{employee.department}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Office Location</p>
+                    <p className="mt-1">{employee.office_location}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Email</p>
-                  <p className="mt-1">{employee?.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Department</p>
-                  <p className="mt-1">{employee?.department}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Office Location</p>
-                  <p className="mt-1">{employee?.office_location}</p>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Loading profile...</p>
+              )}
             </CardContent>
           </Card>
         </section>
