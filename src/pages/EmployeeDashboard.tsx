@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/db/supabase';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
@@ -16,10 +16,21 @@ export function EmployeeDashboard() {
   const [loading, setLoading] = useState(true);
 
   const sidebarItems = [
-    { label: 'My Tickets', path: '/dashboard', icon: <Ticket className="h-4 w-4" /> },
+    { label: 'My Tickets', path: '/dashboard#tickets', icon: <Ticket className="h-4 w-4" /> },
     { label: 'Create Ticket', path: '/dashboard#create', icon: <Plus className="h-4 w-4" /> },
     { label: 'Profile', path: '/dashboard#profile', icon: <UserIcon className="h-4 w-4" /> },
   ];
+
+  const handleSidebarClick = useCallback((path: string) => {
+    const hash = path.split('#')[1];
+    if (hash) {
+      window.history.replaceState(null, '', `/dashboard#${hash}`);
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, []);
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -45,7 +56,7 @@ export function EmployeeDashboard() {
   }, [user]);
 
   return (
-    <DashboardLayout sidebarItems={sidebarItems}>
+    <DashboardLayout sidebarItems={sidebarItems} onSidebarItemClick={handleSidebarClick}>
       <div className="p-4 md:p-8 space-y-8">
         {/* Create Ticket Section */}
         <section id="create">
@@ -53,7 +64,7 @@ export function EmployeeDashboard() {
         </section>
 
         {/* My Tickets Section */}
-        <section>
+        <section id="tickets">
           <div className="mb-6">
             <h2 className="text-2xl font-semibold text-balance">My Tickets</h2>
             <p className="text-muted-foreground mt-1 text-pretty">

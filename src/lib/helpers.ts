@@ -26,7 +26,9 @@ export async function getUserRole(): Promise<UserRole | null> {
 export async function uploadScreenshot(file: File): Promise<string | null> {
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !user) return null;
+  if (userError || !user) {
+    throw new Error(`Authentication error: ${userError?.message || 'User not logged in'}`);
+  }
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${user.id}/${Date.now()}.${fileExt}`;
@@ -35,9 +37,13 @@ export async function uploadScreenshot(file: File): Promise<string | null> {
     .from('bug-screenshots')
     .upload(fileName, file);
 
-  if (error || !data) {
+  if (error) {
     console.error('Upload error:', error);
-    return null;
+    throw new Error(`Screenshot upload failed: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Screenshot upload failed: No data returned');
   }
 
   const { data: urlData } = supabase.storage

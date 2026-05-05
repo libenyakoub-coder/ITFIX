@@ -62,13 +62,15 @@ export function CreateTicketForm({ onSuccess }: CreateTicketFormProps) {
       let screenshotUrl: string | null = null;
 
       if (screenshot) {
-        screenshotUrl = await uploadScreenshot(screenshot);
-        if (!screenshotUrl) {
-          throw new Error('Failed to upload screenshot');
+        try {
+          screenshotUrl = await uploadScreenshot(screenshot);
+        } catch (uploadError) {
+          console.warn('Screenshot upload failed, submitting ticket without screenshot:', uploadError);
+          toast.warning('Screenshot upload failed. Submitting ticket without screenshot.');
         }
       }
 
-      const { error } = await supabase.from('tickets').insert({
+      const insertPayload = {
         employee_id: user.id,
         title: formData.title,
         description: formData.description,
@@ -76,10 +78,18 @@ export function CreateTicketForm({ onSuccess }: CreateTicketFormProps) {
         office_location: formData.office_location,
         screenshot_url: screenshotUrl,
         status: 'pending',
-      });
+      };
 
-      if (error) throw error;
+      console.log('Submitting ticket:', insertPayload);
 
+      const { data: insertData, error } = await supabase.from('tickets').insert(insertPayload).select();
+
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw new Error(`Database error: ${error.message} (code: ${error.code})`);
+      }
+
+      console.log('Ticket created successfully:', insertData);
       toast.success('Ticket created successfully');
       setFormData({
         title: '',
@@ -90,6 +100,7 @@ export function CreateTicketForm({ onSuccess }: CreateTicketFormProps) {
       setScreenshot(null);
       onSuccess?.();
     } catch (error) {
+      console.error('Ticket creation failed:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to create ticket');
     } finally {
       setLoading(false);
