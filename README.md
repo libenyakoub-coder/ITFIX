@@ -97,6 +97,8 @@ ITFIX is a comprehensive IT Support Extranet and Ticketing platform built to str
 - Internal documentation for system configurations.
 
 ## DATABASE SCHEMA
+<img width="1022" height="679" alt="image" src="https://github.com/user-attachments/assets/8229a214-1d77-4857-a93e-726d41dcb5d5" />
+
 
 | Élément | Dans le sujet | Dans IT-Fix | Description |
 |---------|--------------|-------------|-------------|
