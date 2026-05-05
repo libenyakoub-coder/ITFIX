@@ -59,6 +59,32 @@ export function CreateTicketForm({ onSuccess }: CreateTicketFormProps) {
     setLoading(true);
 
     try {
+      // Ensure the employee record exists before creating a ticket
+      // (the foreign key tickets_employee_id_fkey requires it)
+      const { data: existingEmployee } = await supabase
+        .from('employees')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!existingEmployee) {
+        console.log('Employee record missing, creating one...');
+        const { error: empError } = await supabase
+          .from('employees')
+          .upsert({
+            id: user.id,
+            full_name: employee?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Unknown',
+            email: user.email || '',
+            department: employee?.department || user.user_metadata?.department || '',
+            office_location: formData.office_location || employee?.office_location || '',
+          }, { onConflict: 'id' });
+
+        if (empError) {
+          console.error('Failed to create employee record:', empError);
+          throw new Error(`Could not create your employee profile: ${empError.message}`);
+        }
+      }
+
       let screenshotUrl: string | null = null;
 
       if (screenshot) {
